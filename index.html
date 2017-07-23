@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        span {
+            width: 50px;
+            height: 50px;
+            display: block;
+            float: left;
+            background: cyan;
+            margin: 5px;
+            border-radius: 5px;
+            line-height: 50px;
+            text-align: center;
+        }
+
+        #wrap { 
+            background: black;
+            /* float: left; */
+            margin: 0;
+        }
+
+        .flipped {
+            background: white;
+        }
+        /* .pink {
+            background: pink;
+        } */
+
+        .black {
+            background: gray;
+        }
+
+        .pink {
+            background: lightpink;
+        }
+
+        input {
+            padding: 5px;
+            line-height: 20px;
+        }
+
+        div {
+            margin: 20px;
+        }
+
+        #newgame {
+            margin-top: 100px;
+            width: 300px;
+            height: 50px;
+            font-size: 20px;
+        }
+        section {
+            width: 1200px;
+            height: 600px;
+            float: left;
+            margin: 20px;
+        }
+        .box {
+            float: left;
+        }
+    </style>
+</head>
+
+<body>
+    <section>
+         <div id="wrap"></div>
+    </section>
+   
+    <div class="box">
+        <div>
+            剩余地雷数：<a id="left"></a>
+        </div>
+        <div>
+            难度：
+            <input type="button" name="" value="简单">
+            <input type="button" name="" value="一般">
+            <input type="button" name="" value="复杂">
+        </div>
+        <input type="button" id="newgame" value="重新开始">
+    </div>
+</body>
+<script>
+    var wrap = document.getElementById("wrap");
+    var lineCount = 10;
+    var columnCount = 20;
+    var leiCount = 35;;
+    var spans = wrap.getElementsByTagName("span");
+    var needToSetLei = 0;
+    var left = document.getElementById("left");
+    var btns = document.getElementsByTagName("input");
+    var newgame = document.getElementById("newgame");
+    window.onload = function () {
+        //去掉默认的contextmenu事件，否则会和右键事件同时出现。
+        document.oncontextmenu = function (e) {
+            e.preventDefault();
+        }
+    }
+    function create() {
+        var str = "";
+        for (var i = 0; i < lineCount; i++) {
+            for (var j = 0; j < columnCount; j++) {
+                str += "<span onselectstart='return false' class='new'></span>";
+            }
+            str += "<br>";
+        }
+        wrap.innerHTML = str;
+        wrap.style.width = columnCount * 60 + "px";
+         wrap.style.height = lineCount * 60 + "px";
+    }
+    create();
+    function setSpans() {
+        for (var i = 0; i < lineCount * columnCount; i++) {
+            spans[i].index = i;
+            spans[i].lei = 0;
+            spans[i].onclick = function () {
+                if (needToSetLei == 0) {
+                    setLei(this.index);
+                    needToSetLei = 1;
+                }
+                flip(this);
+            }
+            spans[i].onmousedown = function (e) {
+                var e = e || window.event
+                if (e.button == "2") {
+                    if (this.className == "flipped") {
+                        return;
+                    } else if (this.className == "new") {
+                        this.className = "black";
+                    } else if (this.className == "black") {
+                        this.className = "pink";
+                    } else if (this.className == "pink") {
+                        this.className = "new";
+                    }
+                    leftLei();
+                }
+            }
+            spans[i].ondblclick = function (e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                var neighbours = createArr(this.index);
+                var num = 0;
+                for (var i = 0; i < neighbours.length; i++) {
+                    if (spans[neighbours[i]].className == "black") {
+                        num++;
+                    }
+                }
+                if (num == this.innerHTML) {
+                    for (var i = 0; i < neighbours.length; i++) {
+                        flip(spans[neighbours[i]]);
+                    }
+                }
+            }
+        }
+    }
+    setSpans();
+    function flip(span) {
+        if (span.className != "new") {
+            return;
+        }
+        if (span.lei == 1) {
+            alert("踩到雷拉~");
+            newGame();
+            return;
+        }
+        var count = countLei(span.index);
+        span.className = "flipped";
+        if (count == 0) {
+            var neighbours = createArr(span.index);
+            for (var i = 0; i < neighbours.length; i++) {
+                flip(spans[neighbours[i]]);
+            }
+        } else {
+            span.innerHTML = count;
+        }
+        leftLei();
+
+    }
+
+
+    function setLei(m) {
+        var neighbours = createArr(m);
+        neighbours.push(m);
+        var selected = [];
+        for (var count = 0; count < leiCount;) {
+            var n = Math.floor(Math.random() * lineCount * columnCount);
+            if (neighbours.indexOf(n) == -1 && selected.indexOf(n) == -1) {
+                selected.push(n);
+                count++;
+                spans[n].lei = 1;
+            }
+        }
+    }
+    function createArr(m) {
+        var suibian = m;
+        var arr = [suibian - 1, suibian + 1, suibian + columnCount + 1, suibian + columnCount, suibian - columnCount, suibian + columnCount - 1, suibian - columnCount + 1, suibian - columnCount - 1];
+        if (Math.floor(suibian / columnCount) < 1) {
+            arr = [suibian - 1, suibian + 1, suibian + columnCount, suibian + columnCount + 1, suibian + columnCount - 1];
+        }
+        if (Math.floor(suibian / columnCount) == lineCount - 1) {
+            arr = [suibian - 1, suibian + 1, suibian - columnCount, suibian - columnCount + 1, suibian - columnCount - 1];
+        }
+        if (suibian % columnCount == 0) {
+            arr = [suibian + 1, suibian - columnCount, suibian + columnCount, suibian - columnCount + 1, suibian + columnCount + 1];
+        }
+        if (suibian % columnCount == columnCount - 1) {
+            arr = [suibian - 1, suibian - columnCount, suibian + columnCount, suibian - columnCount - 1, suibian + columnCount - 1];
+        }
+        if (suibian == 0) {
+            arr = [suibian + 1, suibian + columnCount, suibian + columnCount + 1];
+        }
+        if (suibian == columnCount - 1) {
+            arr = [suibian - 1, suibian + columnCount, suibian + columnCount - 1];
+        }
+        if (suibian / columnCount == lineCount - 1) {
+            arr = [suibian + 1, suibian - columnCount, suibian - columnCount + 1];
+        }
+        if (suibian == lineCount * columnCount - 1) {
+            arr = [suibian - 1, suibian - columnCount, suibian - columnCount - 1];
+        }
+        return arr;
+    }
+
+    function countLei(m) {
+        var arr = createArr(m);
+        var num = 0;
+        for (var i = 0; i < arr.length; i++) {
+            if (spans[arr[i]].lei == 1) {
+                num++;
+            }
+        }
+        return num;
+    }
+    function newGame() {
+        for (var i = 0; i < lineCount * columnCount; i++) {
+            spans[i].className = "new";
+            spans[i].lei = 0;
+            spans[i].innerHTML = "";
+        }
+        needToSetLei = 0;
+        leftLei();
+    }
+    function leftLei() {
+        var num = leiCount;
+        var numFlipped = columnCount * lineCount - leiCount;
+        for (var i = 0; i < columnCount * lineCount; i++) {
+            if (spans[i].className == "black") {
+                num--;
+            }
+            if (spans[i].className == "flipped") {
+                numFlipped--;
+            }
+        }
+        left.innerHTML = num;
+        if (numFlipped == 0) {
+            alert("恭喜你，获得了胜利~");
+            return;
+        }
+    }
+    leftLei();
+    newgame.onclick = function () {
+        newGame();
+    }
+    btns[0].onclick = function () {
+        lineCount = 10;
+        columnCount = 10;
+        leiCount = 15;
+        create();
+        setSpans();
+        leftLei();
+    }
+    btns[1].onclick = function () {
+        lineCount = 10;
+        columnCount = 15;
+        leiCount = 25;
+        create();
+        setSpans();
+        leftLei();
+    }
+    btns[2].onclick = function () {
+        lineCount = 10;
+        columnCount = 20;
+        leiCount = 35;
+        create();
+        setSpans();
+        leftLei();
+    }
+
+</script>
+
+</html>
